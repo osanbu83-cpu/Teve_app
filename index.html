@@ -3,12 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Teve App - Colombia Cast</title>
-
-  <!-- Librería Oficial de Google Cast Web Sender SDK -->
-  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  <title>Teve App - Colombia</title>
   
-  <!-- Librería HLS.js para reproducir streams M3U8 en navegadores móviles -->
+  <!-- Librería HLS.js para canales secundarios -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -21,31 +18,14 @@
       text-align: center; 
     }
 
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      max-width: 600px;
-      margin: 0 auto 15px auto;
-    }
-
-    h1 { color: #f87171; font-size: 20px; margin: 0; }
-
-    /* Botón oficial de Chromecast */
-    google-cast-launcher {
-      width: 40px;
-      height: 40px;
-      cursor: pointer;
-      --connected-color: #38bdf8;
-      --disconnected-color: #ffffff;
-    }
+    h1 { color: #f87171; font-size: 22px; margin-bottom: 20px; }
 
     .card-grid { 
       display: grid; 
       grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
       gap: 12px; 
       max-width: 600px;
-      margin: 0 auto;
+      margin: 0 auto 20px auto;
     }
 
     .channel-card { 
@@ -63,18 +43,17 @@
     }
 
     .player-container { 
-      margin-top: 20px; 
       width: 100%; 
       max-width: 600px; 
-      margin-left: auto; 
-      margin-right: auto; 
+      margin: 0 auto; 
     }
 
-    video { 
+    iframe, video { 
       width: 100%; 
       aspect-ratio: 16/9;
       border-radius: 12px; 
       background: #000; 
+      border: none;
     }
 
     .status-text {
@@ -86,91 +65,49 @@
 </head>
 <body>
 
-  <div class="header">
-    <h1>📺 Teve App Colombia</h1>
-    <!-- Botón nativo de transmisión al TV -->
-    <google-cast-launcher id="castbutton"></google-cast-launcher>
-  </div>
+  <h1>📺 Teve App Colombia</h1>
 
-  <p class="status-text" id="status-msg">Toca el botón de la pantalla para conectar tu Smart TV</p>
-
-  <!-- Lista de Canales Funcionales -->
+  <!-- Botones de Canales -->
   <div class="card-grid">
-    <div class="channel-card" onclick="selectChannel('https://rtvc-live-fast.yospace.com/stream/rtvc-senaltv-fast/index.m3u8', 'Señal Colombia')">
+    <div class="channel-card" onclick="loadCaracol()">
+      <h3>🔴 Caracol TV</h3>
+    </div>
+    <div class="channel-card" onclick="loadHls('https://rtvc-live-fast.yospace.com/stream/rtvc-senaltv-fast/index.m3u8', 'Señal Colombia')">
       <h3>Señal Colombia</h3>
     </div>
-    <div class="channel-card" onclick="selectChannel('https://unlimited3-us.streambay.pool.streamm.tv/hls/teleantioquia.m3u8', 'Teleantioquia')">
+    <div class="channel-card" onclick="loadHls('https://unlimited3-us.streambay.pool.streamm.tv/hls/teleantioquia.m3u8', 'Teleantioquia')">
       <h3>Teleantioquia</h3>
-    </div>
-    <div class="channel-card" onclick="selectChannel('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', 'Canal Test HD')">
-      <h3>Canal Test HD</h3>
     </div>
   </div>
 
-  <!-- Reproductor local -->
+  <!-- Pantalla del Reproductor -->
   <div class="player-container">
-    <h3 id="current-channel-title">Selecciona un canal para reproducir</h3>
-    <video id="video-player" controls playsinline autoplay></video>
+    <h3 id="current-channel-title">Selecciona Caracol TV para reproducir</h3>
+    <div id="media-holder">
+      <!-- Por defecto carga Caracol TV -->
+      <iframe src="https://www.caracoltv.com/senal-vivo-embed" allowfullscreen allow="autoplay"></iframe>
+    </div>
   </div>
 
   <script>
-    const video = document.getElementById('video-player');
     const titleText = document.getElementById('current-channel-title');
-    const statusMsg = document.getElementById('status-msg');
-    
-    let currentStreamUrl = '';
-    let currentChannelName = '';
+    const mediaHolder = document.getElementById('media-holder');
     let hls = null;
-    let castSession = null;
 
-    // Configuración de Google Cast
-    window['__onGCastApiAvailable'] = function(isAvailable) {
-      if (isAvailable) {
-        initializeCastApi();
-      }
-    };
-
-    function initializeCastApi() {
-      const context = cast.framework.CastContext.getInstance();
-      context.setOptions({
-        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
-        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
-      });
-
-      context.addEventListener(
-        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-        function(event) {
-          switch (event.sessionState) {
-            case cast.framework.SessionState.SESSION_STARTED:
-            case cast.framework.SessionState.SESSION_RESUMED:
-              castSession = context.getCurrentSession();
-              statusMsg.innerText = "🟢 Conectado al Smart TV";
-              if (currentStreamUrl) {
-                castToTV(currentStreamUrl, currentChannelName);
-              }
-              break;
-            case cast.framework.SessionState.SESSION_ENDED:
-              castSession = null;
-              statusMsg.innerText = "Televisor desconectado. Reproduciendo en el teléfono.";
-              break;
-          }
-        }
-      );
+    // Carga de Caracol TV vía Embebido Oficial
+    function loadCaracol() {
+      titleText.innerText = "Canal: Caracol TV (En Vivo)";
+      if (hls) { hls.destroy(); }
+      mediaHolder.innerHTML = `<iframe src="https://www.caracoltv.com/senal-vivo-embed" allowfullscreen allow="autoplay"></iframe>`;
     }
 
-    function selectChannel(streamUrl, channelName) {
-      currentStreamUrl = streamUrl;
-      currentChannelName = channelName;
+    // Carga de otros canales vía HLS directo
+    function loadHls(streamUrl, channelName) {
       titleText.innerText = "Canal: " + channelName;
+      
+      mediaHolder.innerHTML = `<video id="video-player" controls playsinline autoplay></video>`;
+      const video = document.getElementById('video-player');
 
-      if (castSession) {
-        castToTV(streamUrl, channelName);
-      } else {
-        playOnPhone(streamUrl);
-      }
-    }
-
-    function playOnPhone(streamUrl) {
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = streamUrl;
         video.play();
@@ -183,28 +120,6 @@
           video.play();
         });
       }
-    }
-
-    function castToTV(streamUrl, channelName) {
-      if (!castSession) return;
-
-      video.pause();
-
-      const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegurl');
-      mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
-      mediaInfo.metadata.title = channelName;
-      mediaInfo.metadata.subtitle = "Transmisión en Vivo";
-
-      const request = new chrome.cast.media.LoadRequest(mediaInfo);
-
-      castSession.loadMedia(request).then(
-        function() {
-          statusMsg.innerText = "📺 Reproduciendo " + channelName + " en el televisor";
-        },
-        function(errorCode) {
-          statusMsg.innerText = "Error al enviar al TV. Código: " + errorCode;
-        }
-      );
     }
   </script>
 </body>
