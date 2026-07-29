@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teve App - Colombia Cast</title>
+
+  <!-- Librería Oficial de Google Cast Web Sender SDK -->
+  <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
+  
+  <!-- Librería HLS.js para reproducir en el teléfono -->
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+  <style>
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      background: #0f172a; 
+      color: white; 
+      margin: 0; 
+      padding: 15px; 
+      text-align: center; 
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 600px;
+      margin: 0 auto 15px auto;
+    }
+
+    h1 { color: #f87171; font-size: 20px; margin: 0; }
+
+    /* Botón oficial de Chromecast */
+    google-cast-launcher {
+      width: 40px;
+      height: 40px;
+      cursor: pointer;
+      --connected-color: #38bdf8;
+      --disconnected-color: #ffffff;
+    }
+
+    .card-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      gap: 12px; 
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .channel-card { 
+      background: #1e293b; 
+      border-radius: 12px; 
+      padding: 15px; 
+      cursor: pointer; 
+      transition: 0.2s; 
+      border: 2px solid transparent; 
+    }
+
+    .channel-card:hover, .channel-card:active { 
+      border-color: #38bdf8; 
+      transform: scale(0.97); 
+    }
+
+    .player-container { 
+      margin-top: 20px; 
+      width: 100%; 
+      max-width: 600px; 
+      margin-left: auto; 
+      margin-right: auto; 
+    }
+
+    video { 
+      width: 100%; 
+      aspect-ratio: 16/9;
+      border-radius: 12px; 
+      background: #000; 
+    }
+
+    .status-text {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>📺 Teve App Colombia</h1>
+    <!-- Botón nativo de transmisión al TV -->
+    <google-cast-launcher id="castbutton"></google-cast-launcher>
+  </div>
+
+  <p class="status-text" id="status-msg">Toca el botón de la pantalla para conectar tu Smart TV</p>
+
+  <!-- Lista de Canales -->
+  <div class="card-grid">
+    <div class="channel-card" onclick="selectChannel('https://caracol.com/streaming/caracol.m3u8', 'Caracol TV')">
+      <h3>Caracol TV</h3>
+    </div>
+    <div class="channel-card" onclick="selectChannel('https://rcn.com/streaming/rcn.m3u8', 'RCN TV')">
+      <h3>RCN TV</h3>
+    </div>
+    <div class="channel-card" onclick="selectChannel('https://rtvc.com/streaming/rtvc.m3u8', 'Señal Colombia')">
+      <h3>Señal Colombia</h3>
+    </div>
+  </div>
+
+  <!-- Reproductor local -->
+  <div class="player-container">
+    <h3 id="current-channel-title">Ningún canal seleccionado</h3>
+    <video id="video-player" controls playsinline autoplay></video>
+  </div>
+
+  <script>
+    const video = document.getElementById('video-player');
+    const titleText = document.getElementById('current-channel-title');
+    const statusMsg = document.getElementById('status-msg');
+    
+    let currentStreamUrl = '';
+    let currentChannelName = '';
+    let hls = null;
+    let castSession = null;
+
+    // Configuración de Google Cast
+    window['__onGCastApiAvailable'] = function(isAvailable) {
+      if (isAvailable) {
+        initializeCastApi();
+      }
+    };
+
+    function initializeCastApi() {
+      const context = cast.framework.CastContext.getInstance();
+      context.setOptions({
+        receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+        autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+      });
+
+      context.addEventListener(
+        cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
+        function(event) {
+          switch (event.sessionState) {
+            case cast.framework.SessionState.SESSION_STARTED:
+            case cast.framework.SessionState.SESSION_RESUMED:
+              castSession = context.getCurrentSession();
+              statusMsg.innerText = "🟢 Conectado al Smart TV";
+              if (currentStreamUrl) {
+                castToTV(currentStreamUrl, currentChannelName);
+              }
+              break;
+            case cast.framework.SessionState.SESSION_ENDED:
+              castSession = null;
+              statusMsg.innerText = "Televisor desconectado. Reproduciendo en el teléfono.";
+              break;
+          }
+        }
+      );
+    }
+
+    function selectChannel(streamUrl, channelName) {
+      currentStreamUrl = streamUrl;
+      currentChannelName = channelName;
+      titleText.innerText = "Canal: " + channelName;
+
+      if (castSession) {
+        castToTV(streamUrl, channelName);
+      } else {
+        playOnPhone(streamUrl);
+      }
+    }
+
+    function playOnPhone(streamUrl) {
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = streamUrl;
+        video.play();
+      } else if (Hls.isSupported()) {
+        if (hls) hls.destroy();
+        hls = new Hls();
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+          video.play();
+        });
+      }
+    }
+
+    function castToTV(streamUrl, channelName) {
+      if (!castSession) return;
+
+      video.pause();
+
+      const mediaInfo = new chrome.cast.media.MediaInfo(streamUrl, 'application/x-mpegurl');
+      mediaInfo.metadata = new chrome.cast.media.GenericMediaMetadata();
+      mediaInfo.metadata.title = channelName;
+      mediaInfo.metadata.subtitle = "Transmisión en Vivo";
+
+      const request = new chrome.cast.media.LoadRequest(mediaInfo);
+
+      castSession.loadMedia(request).then(
+        function() {
+          statusMsg.innerText = "📺 Reproduciendo " + channelName + " en el televisor";
+        },
+        function(errorCode) {
+          statusMsg.innerText = "Error al enviar al TV. Código: " + errorCode;
+        }
+      );
+    }
+  </script>
+</body>
+</html>
