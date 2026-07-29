@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Teve App - Colombia</title>
   
-  <!-- Librería HLS.js para canales secundarios -->
+  <!-- Librería HLS.js para reproductores directos -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -48,7 +48,7 @@
       margin: 0 auto; 
     }
 
-    iframe, video { 
+    video { 
       width: 100%; 
       aspect-ratio: 16/9;
       border-radius: 12px; 
@@ -56,10 +56,15 @@
       border: none;
     }
 
-    .status-text {
-      font-size: 14px;
-      color: #94a3b8;
-      margin-bottom: 10px;
+    .btn-caracol {
+      background: #e11d48;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      display: inline-block;
+      font-weight: bold;
+      margin-top: 15px;
     }
   </style>
 </head>
@@ -69,7 +74,7 @@
 
   <!-- Botones de Canales -->
   <div class="card-grid">
-    <div class="channel-card" onclick="loadCaracol()">
+    <div class="channel-card" onclick="openCaracol()">
       <h3>🔴 Caracol TV</h3>
     </div>
     <div class="channel-card" onclick="loadHls('https://rtvc-live-fast.yospace.com/stream/rtvc-senaltv-fast/index.m3u8', 'Señal Colombia')">
@@ -82,10 +87,9 @@
 
   <!-- Pantalla del Reproductor -->
   <div class="player-container">
-    <h3 id="current-channel-title">Selecciona Caracol TV para reproducir</h3>
+    <h3 id="current-channel-title">Selecciona un canal para comenzar</h3>
     <div id="media-holder">
-      <!-- Por defecto carga Caracol TV -->
-      <iframe src="https://www.caracoltv.com/senal-vivo-embed" allowfullscreen allow="autoplay"></iframe>
+      <video id="video-player" controls playsinline autoplay></video>
     </div>
   </div>
 
@@ -94,14 +98,21 @@
     const mediaHolder = document.getElementById('media-holder');
     let hls = null;
 
-    // Carga de Caracol TV vía Embebido Oficial
-    function loadCaracol() {
-      titleText.innerText = "Canal: Caracol TV (En Vivo)";
+    // Redirección directa a la señal de Caracol para omitir bloqueos CSP/iFrame
+    function openCaracol() {
+      titleText.innerText = "Canal: Caracol TV (Señal Oficial)";
       if (hls) { hls.destroy(); }
-      mediaHolder.innerHTML = `<iframe src="https://www.caracoltv.com/senal-vivo-embed" allowfullscreen allow="autoplay"></iframe>`;
+      
+      mediaHolder.innerHTML = `
+        <div style="padding: 20px; background: #1e293b; border-radius: 12px;">
+          <p>Caracol TV requiere abrir la transmisión directa para evitar bloqueos del reproductor.</p>
+          <a href="https://www.caracoltv.com/senal-vivo" target="_blank" class="btn-caracol">▶ Abrir Caracol TV en Vivo</a>
+        </div>
+      `;
+      window.open('https://www.caracoltv.com/senal-vivo', '_blank');
     }
 
-    // Carga de otros canales vía HLS directo
+    // Carga HLS interna para canales sin bloqueo
     function loadHls(streamUrl, channelName) {
       titleText.innerText = "Canal: " + channelName;
       
