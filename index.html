@@ -8,7 +8,7 @@
   <!-- Librería Oficial de Google Cast Web Sender SDK -->
   <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js?loadCastFramework=1"></script>
   
-  <!-- Librería HLS.js para reproducir en el teléfono -->
+  <!-- Librería HLS.js para reproducir streams M3U8 en navegadores móviles -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -94,22 +94,22 @@
 
   <p class="status-text" id="status-msg">Toca el botón de la pantalla para conectar tu Smart TV</p>
 
-  <!-- Lista de Canales -->
+  <!-- Lista de Canales Funcionales -->
   <div class="card-grid">
-    <div class="channel-card" onclick="selectChannel('https://caracol.com/streaming/caracol.m3u8', 'Caracol TV')">
-      <h3>Caracol TV</h3>
-    </div>
-    <div class="channel-card" onclick="selectChannel('https://rcn.com/streaming/rcn.m3u8', 'RCN TV')">
-      <h3>RCN TV</h3>
-    </div>
-    <div class="channel-card" onclick="selectChannel('https://rtvc.com/streaming/rtvc.m3u8', 'Señal Colombia')">
+    <div class="channel-card" onclick="selectChannel('https://rtvc-live-fast.yospace.com/stream/rtvc-senaltv-fast/index.m3u8', 'Señal Colombia')">
       <h3>Señal Colombia</h3>
+    </div>
+    <div class="channel-card" onclick="selectChannel('https://unlimited3-us.streambay.pool.streamm.tv/hls/teleantioquia.m3u8', 'Teleantioquia')">
+      <h3>Teleantioquia</h3>
+    </div>
+    <div class="channel-card" onclick="selectChannel('https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8', 'Canal Test HD')">
+      <h3>Canal Test HD</h3>
     </div>
   </div>
 
   <!-- Reproductor local -->
   <div class="player-container">
-    <h3 id="current-channel-title">Ningún canal seleccionado</h3>
+    <h3 id="current-channel-title">Selecciona un canal para reproducir</h3>
     <video id="video-player" controls playsinline autoplay></video>
   </div>
 
